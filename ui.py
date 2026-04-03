@@ -1,124 +1,155 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+import customtkinter as ctk
+from tkinter import colorchooser, messagebox
+
+# Импорт генераторов
 from badge_generator import generate_badge
 from logo_generator import generate_logo
 from stl_generator import generate_3d_badge, generate_3d_icon, generate_3d_logo_only
 
-class App:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Производственная система БрГТУ v2.0")
-        self.root.geometry("600x650")
-        self.root.resizable(False, False)
-        
-        header = tk.Label(root, text="Система автоматизации БрГТУ", font=("Arial", 16, "bold"), fg="#0056b3")
-        header.pack(pady=10)
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-        self.notebook = ttk.Notebook(root)
-        self.notebook.pack(expand=True, fill="both", padx=10, pady=10)
+        self.title("Производственная система БрГТУ v2.0")
+        self.geometry("740x760")
+        self.resizable(False, False)
 
-        # Вкладка 1: Бейджи
-        self.tab_badge = ttk.Frame(self.notebook)
-        self.notebook.add(self.tab_badge, text=" Бейджи ")
+        ctk.set_appearance_mode("light")
+        ctk.set_default_color_theme("blue")
+
+        self.badge_color = ctk.StringVar(value="#0056b3")
+        self.logo_mode = ctk.StringVar(value="logo_text")
+
+        # Заголовок
+        self.header = ctk.CTkLabel(self, 
+                                   text="Система автоматизации производства БрГТУ",
+                                   font=ctk.CTkFont(size=23, weight="bold"))
+        self.header.pack(pady=20)
+
+        # Вкладки
+        self.tabview = ctk.CTkTabview(self, width=700, height=560)
+        self.tabview.pack(pady=10, padx=25, fill="both", expand=True)
+
+        self.tab_badge = self.tabview.add("   Бейджи   ")
+        self.tab_logo = self.tabview.add("   Значки и Лого   ")
+
         self.setup_badge_tab()
-
-        # Вкладка 2: Значки и Лого
-        self.tab_logo = ttk.Frame(self.notebook)
-        self.notebook.add(self.tab_logo, text=" Значки / Лого ")
         self.setup_logo_tab()
 
-        self.btn_gen = tk.Button(root, text="СГЕНЕРИРОВАТЬ ВЫБРАННОЕ", command=self.on_generate,
-                                 font=("Arial", 14, "bold"), bg="#4da6ff", fg="white", height=2)
-        self.btn_gen.pack(fill="x", padx=20, pady=20)
-
+        # Кнопка генерации
+        self.generate_button = ctk.CTkButton(self,
+                                             text="СОЗДАТЬ / СГЕНЕРИРОВАТЬ",
+                                             font=ctk.CTkFont(size=19, weight="bold"),
+                                             height=65,
+                                             fg_color="#003366",
+                                             hover_color="#002244",
+                                             corner_radius=12,
+                                             command=self.on_generate)
+        self.generate_button.pack(pady=20, padx=40, fill="x")
     def setup_badge_tab(self):
-        tk.Label(self.tab_badge, text="Данные персонализации", font=("Arial", 11, "bold")).pack(pady=10)
-        
-        tk.Label(self.tab_badge, text="ФИО:").pack()
-        self.entry_name = tk.Entry(self.tab_badge, width=40, font=("Arial", 12))
-        self.entry_name.pack(pady=5)
+        scroll = ctk.CTkScrollableFrame(self.tab_badge)
+        scroll.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ctk.CTkLabel(scroll, text="Персонализация бейджа", 
+                     font=ctk.CTkFont(size=17, weight="bold")).pack(pady=(20, 12), padx=25, anchor="w")
+
+        ctk.CTkLabel(scroll, text="ФИО:", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=30, pady=(8, 4))
+        self.entry_name = ctk.CTkEntry(scroll, height=42, font=ctk.CTkFont(size=14))
+        self.entry_name.pack(fill="x", padx=30, pady=5)
         self.entry_name.insert(0, "Иванов Иван Иванович")
 
-        tk.Label(self.tab_badge, text="Группа:").pack()
-        self.entry_pos = tk.Entry(self.tab_badge, width=40, font=("Arial", 12))
-        self.entry_pos.pack(pady=5)
+        ctk.CTkLabel(scroll, text="Группа / Должность:", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=30, pady=(12, 4))
+        self.entry_pos = ctk.CTkEntry(scroll, height=42, font=ctk.CTkFont(size=14))
+        self.entry_pos.pack(fill="x", padx=30, pady=5)
         self.entry_pos.insert(0, "22-ИТ-1")
 
-        tk.Label(self.tab_badge, text="Тип производства:", font=("Arial", 10, "bold")).pack(pady=10)
-        self.badge_type = tk.StringVar(value="2d")
-        tk.Radiobutton(self.tab_badge, text="Обычный бейдж (PNG)", variable=self.badge_type, value="2d").pack()
-        tk.Radiobutton(self.tab_badge, text="Объемный бейдж (STL)", variable=self.badge_type, value="3d").pack()
+        # Цвет бейджа
+        c = ctk.CTkFrame(scroll)
+        c.pack(fill="x", padx=30, pady=20)
+        ctk.CTkLabel(c, text="Цвет рамки и надписи:", width=180, anchor="w").pack(side="left", padx=10)
+        self.color_btn = ctk.CTkButton(c, text="Выбрать цвет", 
+                                       fg_color=self.badge_color.get(),
+                                       command=self.choose_color)
+        self.color_btn.pack(side="left", padx=10)
 
-        self.frame_3d_settings(self.tab_badge)
+        # Тип изготовления
+        ctk.CTkLabel(scroll, text="Тип изготовления:", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=30, pady=(20, 8))
+        self.badge_type = ctk.StringVar(value="2d")
+        ctk.CTkRadioButton(scroll, text="2D бейдж (PNG)", variable=self.badge_type, value="2d").pack(anchor="w", padx=45, pady=5)
+        ctk.CTkRadioButton(scroll, text="3D бейдж (STL)", variable=self.badge_type, value="3d").pack(anchor="w", padx=45, pady=5)
 
-    def setup_logo_tab(self):
-        tk.Label(self.tab_logo, text="Выберите тип и формат изделия", font=("Arial", 11, "bold")).pack(pady=15)
+        # Параметры 3D
+        self.frame_3d = ctk.CTkFrame(scroll)
+        self.frame_3d.pack(fill="x", padx=30, pady=20)
+        ctk.CTkLabel(self.frame_3d, text="Параметры 3D (мм)").pack(pady=5)
         
-        self.logo_mode = tk.StringVar(value="icon_png")
-        
-        # Блок PNG (2D)
-        tk.Label(self.tab_logo, text="--- Растровая графика (2D) ---", fg="blue").pack()
-        tk.Radiobutton(self.tab_logo, text="Круглый значок БрГТУ (PNG)", 
-                       variable=self.logo_mode, value="icon_png", font=("Arial", 10)).pack(pady=5)
-        tk.Radiobutton(self.tab_logo, text="Чистый логотип (PNG)", 
-                       variable=self.logo_mode, value="logo_png", font=("Arial", 10)).pack(pady=5)
-        
-        # Разделитель
-        tk.Label(self.tab_logo, text="").pack()
-
-        # Блок STL (3D)
-        tk.Label(self.tab_logo, text="--- Модели для печати (3D) ---", fg="blue").pack()
-        tk.Radiobutton(self.tab_logo, text="Круглый значок БрГТУ (STL)", 
-                       variable=self.logo_mode, value="icon_stl", font=("Arial", 10)).pack(pady=5)
-        tk.Radiobutton(self.tab_logo, text="Чистый логотип (STL)", 
-                       variable=self.logo_mode, value="logo_stl", font=("Arial", 10)).pack(pady=5)
-
-    def frame_3d_settings(self, parent):
-        group = tk.LabelFrame(parent, text="Параметры 3D модели (мм)")
-        group.pack(pady=15, padx=20, fill="x")
-        
-        tk.Label(group, text="Толщина базы:").grid(row=0, column=0, padx=5, pady=5)
-        self.entry_base = tk.Entry(group, width=8)
-        self.entry_base.grid(row=0, column=1)
+        self.entry_base = ctk.CTkEntry(self.frame_3d, width=100)
+        self.entry_base.pack(side="left", padx=20, pady=10)
         self.entry_base.insert(0, "4.0")
-
-        tk.Label(group, text="Высота рельефа:").grid(row=1, column=0, padx=5, pady=5)
-        self.entry_relief = tk.Entry(group, width=8)
-        self.entry_relief.grid(row=1, column=1)
+        
+        self.entry_relief = ctk.CTkEntry(self.frame_3d, width=100)
+        self.entry_relief.pack(side="left", padx=20, pady=10)
         self.entry_relief.insert(0, "2.5")
+    def setup_logo_tab(self):
+        scroll = ctk.CTkScrollableFrame(self.tab_logo)
+        scroll.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ctk.CTkLabel(scroll, text="Генерация значков и логотипов", 
+                     font=ctk.CTkFont(size=17, weight="bold")).pack(pady=20)
+
+        f2 = ctk.CTkFrame(scroll)
+        f2.pack(fill="x", padx=40, pady=10)
+        
+        ctk.CTkRadioButton(f2, text="Текстовый логотип (PNG)", variable=self.logo_mode, value="logo_text").pack(anchor="w", padx=40, pady=7)
+        ctk.CTkRadioButton(f2, text="Чистый логотип (STL)", variable=self.logo_mode, value="logo_stl").pack(anchor="w", padx=40, pady=7)
+
+        self.logo_mode.trace("w", self.update_color_option)
+        self.update_color_option()
+
+    def update_color_option(self, *args):
+        pass  # Цвет пока не используется в лого
+
+    def choose_color(self):
+        color = colorchooser.askcolor(initialcolor=self.badge_color.get())[1]
+        if color:
+            self.badge_color.set(color)
+            self.color_btn.configure(fg_color=color)
 
     def on_generate(self):
-        tab = self.notebook.index(self.notebook.select())
-        
+        current_tab = self.tabview.get()
+
         try:
-            b, r = float(self.entry_base.get()), float(self.entry_relief.get())
-        except:
-            b, r = 4.0, 2.5
+            base = float(self.entry_base.get() or 4.0)
+            relief = float(self.entry_relief.get() or 2.5)
 
-        if tab == 0: # Бейджи
-            name, pos = self.entry_name.get().strip(), self.entry_pos.get().strip()
-            if not name:
-                messagebox.showerror("Ошибка", "Заполните ФИО")
-                return
-            res = generate_badge(name, pos) if self.badge_type.get() == "2d" else generate_3d_badge(name, pos, b, r)
-        
-        else: # Значки / Лого
-            mode = self.logo_mode.get()
-            if mode == "icon_png":
-                res = generate_logo("classic") # Вызывает генерацию классического значка
-            elif mode == "logo_png":
-                res = generate_logo("colored") # Или "text_only" в зависимости от настроек
-            elif mode == "icon_stl":
-                res = generate_3d_icon(b, r)
-            elif mode == "logo_stl":
-                res = generate_3d_logo_only(b, r)
+            if "Бейджи" in current_tab:
+                name = self.entry_name.get().strip()
+                pos = self.entry_pos.get().strip()
+                if not name:
+                    messagebox.showerror("Ошибка", "Введите ФИО!")
+                    return
 
-        messagebox.showinfo("Успех", f"Файл успешно создан:\n{res}")
+                if self.badge_type.get() == "2d":
+                    # Исправленный вызов — теперь 3 аргумента
+                    result = generate_badge(name, pos, self.badge_color.get())
+                else:
+                    result = generate_3d_badge(name, pos, base, relief)
+
+            else:  # Лого
+                mode = self.logo_mode.get()
+                if mode == "logo_text":
+                    result = generate_logo("text_only")
+                elif mode == "logo_stl":
+                    result = generate_3d_logo_only(base, relief)
+
+            messagebox.showinfo("Успех ✓", f"Файл успешно создан:\n{result}")
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Критическая ошибка:\n{str(e)}")
 
 def run_ui():
-    root = tk.Tk()
-    app = App(root)
-    root.mainloop()
+    app = App()
+    app.mainloop()
 
 if __name__ == "__main__":
     run_ui()
